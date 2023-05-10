@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Workout Tracker</title>
+	<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+	<div class="container">
+		<h1>Workout Tracker</h1>
+		<form>
+			<label for="exercise">Exercise:</label>
+			<input type="text" id="exercise" name="exercise" required>
+			<label for="reps">Reps:</label>
+			<input type="number" id="reps" name="reps" required>
+			<label for="sets">Sets:</label>
+			<input type="number" id="sets" name="sets" required>
+			<label for="weight">Weight:</label>
+			<input type="number" id="weight" name="weight" required>
+			<button type="submit" id="add-workout">Add Workout</button>
+		</form>
+		<table id="workout-table">
+			<thead>
+				<tr>
+					<th>Exercise</th>
+					<th>Reps</th>
+					<th>Sets</th>
+					<th>Weight</th>
+				</tr>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+	</div>
+
+	<script src="script.js"></script>
+</body>
+</html>
