@@ -1,0 +1,1838 @@
+import React, { Component } from 'react';
+import axios from 'axios';
+
+export default class CreateExercise extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeExercisename = this.onChangeExercisename.bind(this);
+    this.onChangeType = this.onChangeType.bind(this);
+    this.onChangeCategory = this.onChangeCategory.bind(this);
+    this.onChangeDiscription = this.onChangeDiscription.bind(this);
+    this.onChangeUserId = this.onChangeUserId.bind(this);  
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+        exercisename: '',
+        type: 'Repetition',
+        category: 'Strength',
+        discription: '',
+        progressionId: '',
+        userId: '',
+        users: []
+    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/users/')
+    .then(response => {
+      if (response.data.length > 0) {
+        this.setState({
+          users: response.data.map(user => ({'username': user.username, 'userid': user._id})),
+          userId: response.data[0]._id
+        })
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+  }
+
+  onChangeExercisename(e) {
+    this.setState({
+        exercisename: e.target.value
+    });
+  }
+
+  onChangeType(e) {
+    this.setState({
+        type: e.target.value
+    });
+  }
+
+  onChangeCategory(e) {
+    this.setState({
+        category: e.target.value
+    });
+  }
+
+  onChangeDiscription(e) {
+    this.setState({
+        discription: e.target.value
+    });
+  }
+
+  onChangeUserId(e) {
+    this.setState({
+        userId: e.target.value
+    });
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+  
+    const exercise = {
+      exercisename: this.state.exercisename,
+      type: this.state.type,
+      category: this.state.category,
+      discription: this.state.discription,
+      progressionId: this.state.progressionId,
+      userId: this.state.userId, 
+    };
+  
+    console.log(exercise);
+
+    axios.post('http://localhost:5000/exercises/add', exercise)
+      .then(res => console.log(res.data));
+    
+    window.location = '/exercise';
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Create New Exercise</h3>
+        <form onSubmit={this.onSubmit}>
+          <div className="form-group"> 
+            <label>Exercise Name: </label>
+            <input  type="text"
+                required
+                className="form-control"
+                value={this.state.exercisename}
+                onChange={this.onChangeExercisename}
+                />
+          </div>
+          <div className="form-group">
+            <label>Type: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.type}
+                onChange={this.onChangeType}>
+                    <option value="Repetition">Repetition</option>
+                    <option value="Duration">Duration</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Category: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.category}
+                onChange={this.onChangeCategory}>
+                    <option value="Strength">Strength</option>
+                    <option value="Cardio">Cardio</option>
+                    <option value="Mobility">Mobility</option>
+                    <option value="Others">Others</option>  
+            </select>
+          </div>          
+          <div className="form-group">
+            <label>Discription: </label>
+            <input 
+                type="textarea" 
+                className="form-control"
+                value={this.state.discription}
+                onChange={this.onChangeDiscription}
+                />
+          </div>
+          <div className="form-group">
+            <label>User: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.userId}
+                onChange={this.onChangeUserId}>
+                {
+                  this.state.users.map(function(user) {
+                    return <option 
+                      key={user.username}
+                      value={user.userid}>{user.username}
+                      </option>;
+                  })
+                }  
+            </select>
+          </div>
+          <div className="form-group">
+            <input type="submit" value="Create Exercise" className="btn btn-primary" />
+          </div>
+        </form>
+      </div>
+    )
+  }import React, { Component } from 'react';
+import axios from 'axios';
+import TableScrollbar from 'react-table-scrollbar';
+
+const Exercise = props => (
+    <tr>
+      <td>{props.exercise.exercisename}</td>
+      <td>{props.exercise.discription}</td>
+      <td>{(props.exercise.progressionId) ? "" : "Yes"}</td>
+      <td>
+        <a href="#" onClick={() => { props.addExercise(props.exercise._id) }}>Add</a>
+      </td>
+    </tr>
+)
+
+const SelectedExercise = props => (
+    <tr>
+      <td>{props.exercise.exercisename}</td>
+      <td>{props.exercise.discription}</td>
+      <td>{(props.exercise.progressionId) ? "" : "Yes"}</td>
+      <td>
+        <a href="#" onClick={() => { props.deleteExercise(props.exercise._id) }}>Delete</a>
+      </td>
+    </tr>
+)
+
+export default class CreateProgression extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeProgName = this.onChangeProgName.bind(this);
+    this.onChangeCategory = this.onChangeCategory.bind(this);
+    this.onChangeDiscription = this.onChangeDiscription.bind(this);
+    this.addExercise = this.addExercise.bind(this);
+    this.deleteExercise = this.deleteExercise.bind(this);
+    this.allExerciseList = this.allExerciseList.bind(this);
+    this.selectedExerciseList = this.selectedExerciseList.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+        progname: '',
+        category: 'Strength',
+        discription: '',
+        exercises: [],
+        allexercises: [],
+        selectedexercises: [],
+        userId: ''
+    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/exercises/')
+    .then(response => {
+      if (response.data.length > 0) {
+        this.setState({
+          allexercises: response.data,
+        })
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+  }
+
+  onChangeProgName(e) {
+    this.setState({
+        progname: e.target.value
+    });
+  }
+
+  onChangeCategory(e) {
+    this.setState({
+        category: e.target.value
+    });
+  }
+
+  onChangeDiscription(e) {
+    this.setState({
+        discription: e.target.value
+    });
+  }
+
+  addExercise(id){
+    const exercise = this.state.allexercises.filter(el => el._id === id);
+    this.setState({
+        exercises: this.state.exercises.concat(id),
+        selectedexercises: this.state.selectedexercises.concat(exercise),
+        allexercises: this.state.allexercises.filter(el => el._id !== id)
+    })
+  }
+
+  deleteExercise(id){
+    const exercise = this.state.selectedexercises.filter(el => el._id === id);
+    this.setState({
+        exercises: this.state.exercises.filter(el => el._id !== id),
+        allexercises: this.state.allexercises.concat(exercise),
+        selectedexercises: this.state.selectedexercises.filter(el => el._id !== id)
+    })
+  }
+
+  allExerciseList() {
+    return this.state.allexercises.map(currentexercise => {
+      return <Exercise exercise={currentexercise} addExercise={this.addExercise} key={currentexercise._id}/>;
+    })
+  }
+
+  selectedExerciseList() {
+    if (this.state.selectedexercises.length > 0) {
+        return this.state.selectedexercises.map(currentexercise => {
+        return <SelectedExercise exercise={currentexercise} deleteExercise={this.deleteExercise} key={currentexercise._id}/>;
+        })
+    } else {
+        console.log(this.state.selectedexercises.length);
+    }
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+  
+    const progression = {
+      progname: this.state.progname,
+      category: this.state.category,
+      discription: this.state.discription,
+      exercises: this.state.exercises,
+      userId: this.state.userId, 
+    };
+  
+    console.log(progression);
+
+    axios.post('http://localhost:5000/progressions/add', progression)
+      .then(res => console.log(res.data));
+    
+    //window.location = '/progression';
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Create New Progression</h3>
+        <form onSubmit={this.onSubmit}>
+          <div className="form-group"> 
+            <label>Progression Name: </label>
+            <input  type="text"
+                required
+                className="form-control"
+                value={this.state.progression}
+                onChange={this.onChangeProgName}
+                />
+          </div>
+          <div className="form-group">
+            <label>Category: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.category}
+                onChange={this.onChangeCategory}>
+                    <option value="Strength">Strength</option>
+                    <option value="Cardio">Cardio</option>
+                    <option value="Mobility">Mobility</option>
+                    <option value="Others">Others</option>  
+            </select>
+          </div>          
+          <div className="form-group">
+            <label>Discription: </label>
+            <input 
+                type="textarea" 
+                className="form-control"
+                value={this.state.discription}
+                onChange={this.onChangeDiscription}
+                />
+          </div>
+          <div className="form-group">
+            <label>Available Exercises: </label>
+            <TableScrollbar rows={5}>
+            <table className="table">
+                <thead className="thead-light">
+                    <tr>
+                    <th>Exercise Name</th>
+                    <th>Discription</th>
+                    <th>Progression</th>
+                    <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    { this.allExerciseList() }
+                </tbody>
+            </table>
+            </TableScrollbar>
+          </div>
+          <div className="form-group">
+            <label>Selected Exercises: </label>
+            <TableScrollbar rows={5}>
+            <table className="table">
+                <thead className="thead-light">
+                    <tr>
+                    <th>Exercise Name</th>
+                    <th>Discription</th>
+                    <th>Progression</th>
+                    <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    { this.selectedExerciseList() }
+                </tbody>
+            </table>
+            </TableScrollbar>
+          </div>
+          <div className="form-group">
+            <input type="submit" value="Create Progression" className="btn btn-primary" />
+          </div>
+        </form>
+      </div>
+    )
+  }
+}
+}
+import React, { Component } from 'react';
+import axios from 'axios';
+import TableScrollbar from 'react-table-scrollbar';
+
+const Exercise = props => (
+    <tr>
+      <td>{props.exercise.progname}</td>
+      <td>{props.exercise.exercisename}</td>    
+      <td>{props.exercise.progrank}</td>
+      <td>{props.exercise.type}</td>
+      <td>
+        <a href="#" onClick={() => { props.addExercise(props.exercise._id) }}>Add</a>
+      </td>
+    </tr>
+  )
+
+export default class CreateRoutine extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeRoutinename = this.onChangeRoutinename.bind(this);
+    this.onChangeRoutineType = this.onChangeRoutineType.bind(this);
+    this.addExercise = this.addExercise.bind(this)
+    //this.deleteExercise = this.deleteExercise.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+        routinename: '',
+        routinedetail: [],
+        routinetype: '',
+        exercises:[]    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/exercises/')
+      .then(response => {
+        this.setState({ exercises: response.data })
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+  }
+
+  onChangeRoutinename(e) {
+    this.setState({
+        exercisename: e.target.value
+    });
+  }
+
+  onChangeRoutineType(e) {
+    this.setState({
+        type: e.target.value
+    });
+  }
+
+  addExercise(Exercise) {
+    this.setState({
+      routinedetail: this.state.routinedetail.concat( {
+        Exercise
+      })
+    })
+  }
+
+  deleteExercise(id) {
+    this.setState({
+      exercises: this.state.exercises.filter(el => el._id !== id)
+    })
+  }
+
+  exerciseList() {
+    return this.state.exercises.map(currentexercise => {
+      return <Exercise exercise={currentexercise} deleteExercise={this.deleteExercise} key={currentexercise._id}/>;
+    })
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+  
+    const routine = {
+      routinename: this.state.routinename,
+      routinedetail: this.state.routinedetail,
+      routinetype: this.state.routinetype
+    };
+  
+    console.log(routine);
+
+    axios.post('http://localhost:5000/routines/add', routine)
+      .then(res => console.log(res.data));
+    
+    window.location = '/';
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Create New Routine</h3>
+        <form onSubmit={this.onSubmit}>
+        <div className="form-group"> 
+            <label>Routine Name: </label>
+            <input  type="text"
+                required
+                className="form-control"
+                value={this.state.routinename}
+                onChange={this.onChangeRoutinename}
+                />
+        </div>
+        <div className="form-group">
+            <label>Routine Type: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.routinetype}
+                onChange={this.onChangeRoutineType}>
+                    <option value="Strength">Strength</option>
+                    <option value="Cardio">Cardio</option>
+                    <option value="Mobility">Mobility</option>
+                    <option value="Others">Others</option>  
+            </select>
+        </div>
+        <div className="form-group"> 
+            <label>Exercise: </label>
+            <TableScrollbar rows={5}>
+            <table className="table">
+          <thead className="thead-light">
+            <tr>
+              <th>Progression Name</th>
+              <th>Exercise Name</th>
+              <th>Progression Rank</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            { this.exerciseList() }
+          </tbody>
+        </table>
+        </TableScrollbar>
+        </div>
+        <div className="form-group">
+            <button>Add Exercise</button>
+        </div>
+        <div className="form-group">
+            <input type="submit" value="Create Routine" className="btn btn-primary" />
+        </div>
+        </form>
+      </div>
+    )
+  }
+}import React, { Component } from 'react';
+import axios from 'axios';
+
+export default class CreateUser extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeUsername = this.onChangeUsername.bind(this);
+    this.onChangeGender = this.onChangeGender.bind(this);
+    this.onChangeAge = this.onChangeAge.bind(this);
+    this.onChangeWeight = this.onChangeWeight.bind(this);
+    this.onChangeHeight = this.onChangeHeight.bind(this);
+    this.onChangeUnit = this.onChangeUnit.bind(this);
+    this.onChangeActivity = this.onChangeActivity.bind(this);
+    this.calculateBMI = this.calculateBMI.bind(this);
+    this.calculateBMICategory = this.calculateBMICategory.bind(this);
+    this.calculateBMR = this.calculateBMR.bind(this);
+    this.calculateDailyCalories = this.calculateDailyCalories.bind(this);
+    this.updateDetails = this.updateDetails.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+      username: '',
+      gender: 'Male',
+      age: 0,
+      weight: 0,
+      height: 0,
+      unit: 'Metric',
+      activity: 'Sedentary',
+      bmi: 0,
+      bmiCategory: '',
+      bmr: 0,
+      dailycalories: 0
+    }
+  }
+
+  onChangeUsername(e) {
+    this.setState({
+      username: e.target.value
+    })
+  }
+
+  onChangeGender(e) {
+    this.setState({
+        gender: e.target.value
+    })
+  }
+
+  onChangeAge(e) {
+    this.setState({
+        age: e.target.value
+    })
+  }
+
+  onChangeWeight(e) {
+    this.setState({
+        weight: e.target.value
+    })
+  }
+
+  onChangeHeight(e) {
+    this.setState({
+        height: e.target.value
+    })
+  }
+
+  onChangeUnit(e) {
+    this.setState({
+        unit: e.target.value
+    })
+  }
+
+  onChangeActivity(e) {
+    this.setState({
+        activity: e.target.value
+    })
+  }
+
+  calculateBMI = () => {
+    let w = 0, h = 0, bmi = 0;
+    if(this.state.unit === "Metric"){
+        h = this.state.height;
+        w = this.state.weight;
+    } else if (this.state.unit === "Imperial"){
+        h = this.state.height*2.54;
+        w = this.state.weight/2.2;
+    }
+    bmi = w/(h*h)*10000;
+    this.setState({
+        bmi: bmi.toFixed(1)
+    });
+    return bmi;
+  }
+
+  calculateBMICategory = (bmi) => {
+    let bmiCategory = '';
+    if(bmi === 0){
+      bmiCategory = "";
+    } else if (bmi <= 18.5) {
+      bmiCategory = "Underweight";
+    } else if (bmi <= 24.9) {
+      bmiCategory = "Normal Weight";
+    } else if (bmi <= 29.9) {
+      bmiCategory = "Overweight";
+    } else if (bmi >= 30) {
+      bmiCategory = "Obesity";
+    }
+    this.setState({
+      bmiCategory: bmiCategory
+    });
+    return bmiCategory;
+  }
+
+  calculateBMR = () => {
+    let w = 0, h = 0, bmr = 0;
+    if(this.state.unit === "Metric"){
+        h = this.state.height;
+        w = this.state.weight;
+    } else if (this.state.unit === "Imperial"){
+        h = this.state.height*2.54;
+        w = this.state.weight/2.2;
+    }
+    if(this.state.gender === "Male"){
+        bmr = (h*6.25) + (w*9.99) - (this.state.age*4.92) + 5;
+      } else if (this.state.gender === "Female"){
+        bmr = (h*6.25) + (w*9.99) - (this.state.age*4.92) - 161;
+      }
+      this.setState({
+          bmr: bmr.toFixed(0)
+      });
+      return bmr;
+  }
+
+  calculateDailyCalories = (bmr) => {
+    let dailycalories = 0;
+    if(this.state.activity === "Sedentary"){
+      dailycalories = bmr*1.2;
+    } else if (this.state.activity === "Light Exercise"){
+      dailycalories = bmr*1.375;
+    } else if (this.state.activity === "Moderate Exercise"){
+      dailycalories = bmr*1.55;
+    } else if (this.state.activity === "Heavy Exercise"){
+      dailycalories = bmr*1.725;
+    } else if (this.state.activity === "Athlete"){
+      dailycalories = bmr*1.9;
+    }
+    this.setState({
+      dailycalories: dailycalories.toFixed(0)
+    });
+  }
+
+  updateDetails = () => {
+    let bmi = this.calculateBMI();
+    this.calculateBMICategory(bmi);
+    let bmr = this.calculateBMR();
+    this.calculateDailyCalories(bmr);
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+
+    const user = {
+      username: this.state.username,
+      gender: this.state.gender,
+      age: this.state.age,
+      weight: this.state.weight,
+      height: this.state.height,
+      unit: this.state.unit,
+      activity: this.state.activity,
+      bmi: this.state.bmi,
+      bmiCategory: this.state.bmiCategory,
+      bmr: this.state.bmr,
+      dailycalories: this.state.dailycalories
+    }
+
+    console.log(user);
+
+    axios.post('http://localhost:5000/users/add', user)
+      .then(res => {
+        console.log(res);
+        window.location = '/user/profile/'+res.data.id;
+      });
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Create New User</h3>
+        <form onSubmit={this.onSubmit}>
+          <div className="form-group"> 
+            <label>Username: </label>
+            <input  type="text"
+                required
+                className="form-control"
+                value={this.state.username}
+                onChange={this.onChangeUsername}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Gender: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.gender}
+                onChange={this.onChangeGender}>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Others">Others</option>            
+            </select>
+          </div>
+          <div className="form-group"> 
+            <label>Age: </label>
+            <input  type="number"
+                required
+                className="form-control"
+                value={this.state.age}
+                onChange={this.onChangeAge}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Weight: </label>
+            <input  type="number"
+                required
+                className="form-control"
+                value={this.state.weight}
+                onChange={this.onChangeWeight}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Height: </label>
+            <input  type="number"
+                required
+                className="form-control"
+                value={this.state.height}
+                onChange={this.onChangeHeight}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Unit: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.unit}
+                onChange={this.onChangeUnit}>
+                    <option value="Metric">Metric</option>
+                    <option value="Imperial">Imperial</option>         
+            </select>
+          </div>
+          <div className="form-group"> 
+            <label>Activity: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.activity}
+                onChange={this.onChangeActivity}>
+                    <option value="Sedentary">Sedentary</option>
+                    <option value="Light Exercise">Light Exercise</option>
+                    <option value="Moderate Exercise">Moderate Exercise</option>
+                    <option value="Heavy Exercise">Heavy Exercise</option>
+                    <option value="Athlete">Athlete</option>         
+            </select>
+          </div>
+          <div className="form-group"> 
+            <h2>BMI: {this.state.bmi} Category: {this.state.bmiCategory}</h2>
+            <h2>BMR: {this.state.bmr}</h2>
+            <h2>Daily Calories: {this.state.dailycalories} </h2>
+            <button type="button" onClick={() => this.updateDetails()}>Update Details</button>
+          </div>
+          <div className="form-group">
+            <input type="submit" value="Create User" className="btn btn-primary" />
+          </div>
+        </form>
+      </div>
+    )
+  }
+}
+import React, { Component } from 'react';
+import axios from 'axios';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+
+export default class CreateWorkoutLog extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeWorkoutDate = this.onChangeWorkoutDate.bind(this);
+    this.onChangeRoutineName = this.onChangeRoutineName.bind(this);
+    this.onChangeDuration = this.onChangeDuration.bind(this);
+    this.onChangeUsername = this.onChangeUsername.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+      workoutdate: new Date(),
+      routinename: '',
+      routines: [],
+      duration: 0,
+      username: '',
+      users: []
+    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/users/')
+    .then(response => {
+      if (response.data.length > 0) {
+        this.setState({
+          users: response.data.map(user => user.username),
+          username: response.data[0].username
+        })
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+
+    axios.get('http://localhost:5000/routines/')
+    .then(response => {
+      if (response.data.length > 0) {
+        this.setState({
+          routines: response.data.map(routine => routine.routinename),
+          routinename: response.data[0].routinename
+        })
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+  }
+
+  onChangeWorkoutDate(date) {
+    this.setState({
+      date: date
+    });
+  }
+
+  onChangeRoutineName(e) {
+    this.setState({
+      routinename: e.target.value
+    });
+  }
+
+  onChangeDuration(e) {
+    this.setState({
+      duration: e.target.value
+    });
+  }
+
+  onChangeUsername(e) {
+    this.setState({
+      username: e.target.value
+    });
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+  
+    const workoutlog = {
+      workoutdate: this.state.workoutdate,
+      routinename: this.state.routinename,
+      duration: this.state.duration,
+      username: this.state.username,
+    };
+  
+    console.log(workoutlog);
+
+    axios.post('http://localhost:5000/workoutlogs/add', workoutlog)
+    .then(res => console.log(res.data));
+
+    window.location = '/workout';
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Log Workout</h3>
+        <form onSubmit={this.onSubmit}>
+        <div className="form-group">
+            <label>Workout Date: </label>
+            <div>
+              <DatePicker
+                selected={this.state.workoutdate}
+                onChange={this.onChangeWorkoutDate}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={1}
+                dateFormat="LLL"
+              />
+            </div>
+          </div>
+        <div className="form-group"> 
+            <label>Routine Name: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.routinename}
+                onChange={this.onChangeRoutineName}>
+                {
+                  this.state.routines.map(function(routine) {
+                    return <option 
+                      key={routine}
+                      value={routine}>{routine}
+                      </option>;
+                  })
+                }
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Duration (in minutes): </label>
+            <input 
+                type="text" 
+                className="form-control"
+                value={this.state.duration}
+                onChange={this.onChangeDuration}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>User: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.username}
+                onChange={this.onChangeUsername}>
+                {
+                  this.state.users.map(function(user) {
+                    return <option 
+                      key={user}
+                      value={user}>{user}
+                      </option>;
+                  })
+                }
+            </select>
+          </div>
+          <div className="form-group">
+            <input type="submit" value="Log Workout" className="btn btn-primary" />
+          </div>
+        </form>
+      </div>
+    )import React, { Component } from 'react';
+import axios from 'axios';
+
+export default class EditExercise extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeExercisename = this.onChangeExercisename.bind(this);
+    this.onChangeType = this.onChangeType.bind(this);
+    this.onChangeCategory = this.onChangeCategory.bind(this);
+    this.onChangeDiscription = this.onChangeDiscription.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+        exercisename: '',
+        type: 'Repetition',
+        category: 'Strength',
+        discription: '',
+        progressionId: '',
+        username: '',
+        userId: ''
+    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/exercises/'+this.props.match.params.id)
+      .then(response => {
+        this.setState({
+          exercisename: response.data.exercisename,
+          type: response.data.type,
+          category: response.data.category,
+          discription: response.data.discription,
+          progressionId: response.data.progressionId,
+          userId: response.data.userId
+        })
+        return axios.get('http://localhost:5000/users/'+response.data.userId);
+      })
+      .then(response => {
+        this.setState({
+          username: response.data.username
+        })
+      })
+      .catch(function (error) {
+        console.log(error);
+      })
+  }
+
+  onChangeExercisename(e) {
+    this.setState({
+      exercisename: e.target.value
+    })
+  }
+
+  onChangeType(e) {
+    this.setState({
+        type: e.target.value
+    });
+  }
+
+  onChangeCategory(e) {
+    this.setState({
+        category: e.target.value
+    });
+  }
+
+  onChangeDiscription(e) {
+    this.setState({
+        discription: e.target.value
+    });
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+
+    const exercise = {
+      exercisename: this.state.exercisename,
+      type: this.state.type,
+      category: this.state.category,
+      discription: this.state.discription,
+      progressionId: this.state.progressionId,
+      userId: this.state.userId,
+    };
+
+    console.log(exercise);
+
+    axios.post('http://localhost:5000/exercises/update/' + this.props.match.params.id, exercise)
+      .then(res => console.log(res.data));
+      console.log('Exercise Updated!');
+
+    window.location = '/exercise';
+  }
+
+  render() {
+    return (
+    <div>
+      <h3>Edit Exercise</h3>
+      <form onSubmit={this.onSubmit}>
+        <div className="form-group"> 
+          <label>Exercise Name: </label>
+          <input  type="text"
+              required
+              className="form-control"
+              value={this.state.exercisename}
+              onChange={this.onChangeExercisename}
+              />
+        </div>
+        <div className="form-group">
+          <label>Type: </label>
+          <select ref="userInput"
+              required
+              className="form-control"
+              value={this.state.type}
+              onChange={this.onChangeType}>
+                  <option value="Repetition">Repetition</option>
+                  <option value="Duration">Duration</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Category: </label>
+          <select ref="userInput"
+              required
+              className="form-control"
+              value={this.state.category}
+              onChange={this.onChangeCategory}>
+                  <option value="Strength">Strength</option>
+                  <option value="Cardio">Cardio</option>
+                  <option value="Mobility">Mobility</option>
+                  <option value="Others">Others</option>  
+          </select>
+        </div>        
+        <div className="form-group">
+          <label>Discription: </label>
+          <input 
+              type="textarea" 
+              className="form-control"
+              value={this.state.discription}
+              onChange={this.onChangeDiscription}
+              />
+        </div>
+        <div className="form-group">
+          <label>User: </label>
+          <p>{this.state.username}</p>
+        </div>
+        <div className="form-group">
+          <input type="submit" value="Edit Exercise" className="btn btn-primary" />
+        </div>
+      </form>
+    </div>
+    )
+  }
+}
+  }
+}import React, { Component } from 'react';
+import axios from 'axios';
+
+export default class EditUser extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeGender = this.onChangeGender.bind(this);
+    this.onChangeAge = this.onChangeAge.bind(this);
+    this.onChangeWeight = this.onChangeWeight.bind(this);
+    this.onChangeHeight = this.onChangeHeight.bind(this);
+    this.onChangeUnit = this.onChangeUnit.bind(this);
+    this.onChangeActivity = this.onChangeActivity.bind(this);
+    this.calculateBMI = this.calculateBMI.bind(this);
+    this.calculateBMICategory = this.calculateBMICategory.bind(this);
+    this.calculateBMR = this.calculateBMR.bind(this);
+    this.calculateDailyCalories = this.calculateDailyCalories.bind(this);
+    this.updateDetails = this.updateDetails.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+      username: '',
+      gender: 'Male',
+      age: 0,
+      weight: 0,
+      height: 0,
+      unit: 'Metric',
+      activity: 'Sedentary',
+      bmi: 0,
+      bmiCategory: '',
+      bmr: 0,
+      dailycalories: 0
+    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/users/'+this.props.match.params.id)
+      .then(response => {
+        this.setState({
+          user: response.data,
+          username: response.data.username,
+          gender: response.data.gender,
+          age: response.data.age,
+          weight: response.data.weight,
+          height: response.data.height,
+          unit: response.data.unit,
+          activity: response.data.activity,
+          bmi: response.data.bmi,
+          bmiCategory: response.data.bmiCategory,
+          bmr: response.data.bmr,
+          dailycalories:response.data.dailycalories,
+        })
+      })
+      .catch(function (error) {
+        console.log(error);
+      })
+  }
+
+  onChangeGender(e) {
+    this.setState({
+        gender: e.target.value
+    })
+  }
+
+  onChangeAge(e) {
+    this.setState({
+        age: e.target.value
+    })
+  }
+
+  onChangeWeight(e) {
+    this.setState({
+        weight: e.target.value
+    })
+  }
+
+  onChangeHeight(e) {
+    this.setState({
+        height: e.target.value
+    })
+  }
+
+  onChangeUnit(e) {
+    this.setState({
+        unit: e.target.value
+    })
+  }
+
+  onChangeActivity(e) {
+    this.setState({
+        activity: e.target.value
+    })
+  }
+
+  calculateBMI = () => {
+    let w = 0, h = 0, bmi = 0;
+    if(this.state.unit === "Metric"){
+        h = this.state.height;
+        w = this.state.weight;
+    } else if (this.state.unit === "Imperial"){
+        h = this.state.height*2.54;
+        w = this.state.weight/2.2;
+    }
+    bmi = w/(h*h)*10000;
+    this.setState({
+        bmi: bmi.toFixed(1)
+    });
+    return bmi;
+  }
+
+  calculateBMICategory = (bmi) => {
+    let bmiCategory = '';
+    if(bmi === 0){
+      bmiCategory = "";
+    } else if (bmi <= 18.5) {
+      bmiCategory = "Underweight";
+    } else if (bmi <= 24.9) {
+      bmiCategory = "Normal Weight";
+    } else if (bmi <= 29.9) {
+      bmiCategory = "Overweight";
+    } else if (bmi >= 30) {
+      bmiCategory = "Obesity";
+    }
+    this.setState({
+      bmiCategory: bmiCategory
+    });
+    return bmiCategory;
+  }
+
+  calculateBMR = () => {
+    let w = 0, h = 0, bmr = 0;
+    if(this.state.unit === "Metric"){
+        h = this.state.height;
+        w = this.state.weight;
+    } else if (this.state.unit === "Imperial"){
+        h = this.state.height*2.54;
+        w = this.state.weight/2.2;
+    }
+    if(this.state.gender === "Male"){
+        bmr = (h*6.25) + (w*9.99) - (this.state.age*4.92) + 5;
+      } else if (this.state.gender === "Female"){
+        bmr = (h*6.25) + (w*9.99) - (this.state.age*4.92) - 161;
+      }
+      this.setState({
+          bmr: bmr.toFixed(0)
+      });
+      return bmr;
+  }
+
+  calculateDailyCalories = (bmr) => {
+    let dailycalories = 0;
+    if(this.state.activity === "Sedentary"){
+      dailycalories = bmr*1.2;
+    } else if (this.state.activity === "Light Exercise"){
+      dailycalories = bmr*1.375;
+    } else if (this.state.activity === "Moderate Exercise"){
+      dailycalories = bmr*1.55;
+    } else if (this.state.activity === "Heavy Exercise"){
+      dailycalories = bmr*1.725;
+    } else if (this.state.activity === "Athlete"){
+      dailycalories = bmr*1.9;
+    }
+    this.setState({
+      dailycalories: dailycalories.toFixed(0)
+    });
+  }
+
+  updateDetails = () => {
+    let bmi = this.calculateBMI();
+    this.calculateBMICategory(bmi);
+    let bmr = this.calculateBMR();
+    this.calculateDailyCalories(bmr);
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+
+    const user = {
+      username: this.state.username,
+      gender: this.state.gender,
+      age: this.state.age,
+      weight: this.state.weight,
+      height: this.state.height,
+      unit: this.state.unit,
+      activity: this.state.activity,
+      bmi: this.state.bmi,
+      bmiCategory: this.state.bmiCategory,
+      bmr: this.state.bmr,
+      dailycalories: this.state.dailycalories
+    }
+
+    console.log(user);
+    console.log(this.props.match.params.id);
+
+    axios.post('http://localhost:5000/users/update/', this.props.match.params.id)
+      .then(res => {console.log(res);});
+
+    window.location = '/user/profile/'+this.props.match.params.id;
+    
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Edit User</h3>
+        <form onSubmit={this.onSubmit}>
+          <div className="form-group"> 
+            <label>Username: </label>
+            <h2> {this.state.username} </h2>
+          </div>
+          <div className="form-group"> 
+            <label>Gender: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.gender}
+                onChange={this.onChangeGender}>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Others">Others</option>            
+            </select>
+          </div>
+          <div className="form-group"> 
+            <label>Age: </label>
+            <input  type="number"
+                required
+                className="form-control"
+                value={this.state.age}
+                onChange={this.onChangeAge}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Weight: </label>
+            <input  type="number"
+                required
+                className="form-control"
+                value={this.state.weight}
+                onChange={this.onChangeWeight}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Height: </label>
+            <input  type="number"
+                required
+                className="form-control"
+                value={this.state.height}
+                onChange={this.onChangeHeight}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Unit: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.unit}
+                onChange={this.onChangeUnit}>
+                    <option value="Metric">Metric</option>
+                    <option value="Imperial">Imperial</option>         
+            </select>
+          </div>
+          <div className="form-group"> 
+            <label>Activity: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.activity}
+                onChange={this.onChangeActivity}>
+                    <option value="Sedentary">Sedentary</option>
+                    <option value="Light Exercise">Light Exercise</option>
+                    <option value="Moderate Exercise">Moderate Exercise</option>
+                    <option value="Heavy Exercise">Heavy Exercise</option>
+                    <option value="Athlete">Athlete</option>         
+            </select>
+          </div>
+          <div className="form-group"> 
+            <h2>BMI: {this.state.bmi} Category: {this.state.bmiCategory}</h2>
+            <h2>BMR: {this.state.bmr}</h2>
+            <h2>Daily Calories: {this.state.dailycalories} </h2>
+            <button type="button" onClick={() => this.updateDetails()}>Update Details</button>
+          </div>
+          <div className="form-group">
+            <input type="submit" value="Update User" className="btn btn-primary" />
+          </div>
+        </form>
+      </div>
+    )import React, { Component } from 'react';
+import axios from 'axios';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+
+export default class EditeWorkoutLog extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onChangeWorkoutDate = this.onChangeWorkoutDate.bind(this);
+    this.onChangeRoutineName = this.onChangeRoutineName.bind(this);
+    this.onChangeDuration = this.onChangeDuration.bind(this);
+    this.onChangeUsername = this.onChangeUsername.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+
+    this.state = {
+      workoutdate: new Date(),
+      routinename: '',
+      routines: [],
+      duration: 0,
+      username: '',
+      users: []
+    }
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/workoutlogs/'+this.props.match.params.id)
+    .then(response => {
+      this.setState({
+        workoutdate: new Date(response.data.workoutdate),
+        routinename: response.data.routinename,
+        duration: response.data.duration,
+        username: response.data.username,
+      })   
+    })
+    .catch(function (error) {
+      console.log(error);
+    })
+
+    axios.get('http://localhost:5000/users/')
+    .then(response => {
+      if (response.data.length > 0) {
+        this.setState({
+          users: response.data.map(user => user.username),
+        })
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+
+    axios.get('http://localhost:5000/routines/')
+    .then(response => {
+      if (response.data.length > 0) {
+        this.setState({
+          routines: response.data.map(routine => routine.routinename),
+        })
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+  }
+
+  onChangeWorkoutDate(date) {
+    this.setState({
+      workoutdate: date
+    });
+  }
+
+  onChangeRoutineName(e) {
+    this.setState({
+      routinename: e.target.value
+    });
+  }
+
+  onChangeDuration(e) {
+    this.setState({
+      duration: e.target.value
+    });
+  }
+
+  onChangeUsername(e) {
+    this.setState({
+      username: e.target.value
+    });
+  }
+
+  onSubmit(e) {
+    e.preventDefault();
+  
+    const workoutlog = {
+      workoutdate: new Date(this.state.workoutdate),
+      routinename: this.state.routinename,
+      duration: this.state.duration,
+      username: this.state.username,
+    };
+  
+    console.log(workoutlog);
+
+    axios.post('http://localhost:5000/workoutlogs/update/' + this.props.match.params.id, workoutlog)
+    .then(res => console.log(res.data)); 
+    console.log('Workout Log Updated!');   
+    
+    window.location = '/workout';
+
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>Edit Workout</h3>
+        <form onSubmit={this.onSubmit}>
+        <div className="form-group">
+            <label>Workout Date: </label>
+            <div>
+              <DatePicker
+                selected={this.state.workoutdate}
+                onChange={this.onChangeWorkoutDate}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                dateFormat="LLL"
+              />
+            </div>
+          </div>
+        <div className="form-group"> 
+            <label>Routine Name: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.routinename}
+                onChange={this.onChangeRoutineName}>
+                {
+                  this.state.routines.map(function(routine) {
+                    return <option 
+                      key={routine}
+                      value={routine}>{routine}
+                      </option>;
+                  })
+                }
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Duration (in minutes): </label>
+            <input 
+                type="text" 
+                className="form-control"
+                value={this.state.duration}
+                onChange={this.onChangeDuration}
+                />
+          </div>
+          <div className="form-group"> 
+            <label>Username: </label>
+            <select ref="userInput"
+                required
+                className="form-control"
+                value={this.state.username}
+                onChange={this.onChangeUsername}>
+                {
+                  this.state.users.map(function(user) {
+                    return <option 
+                      key={user}
+                      value={user}>{user}
+                      </option>;
+                  })
+                }
+            </select>
+          </div>
+          <div className="form-group">
+            <input type="submit" value="Edit Workout" className="btn btn-primary" />
+          </div>
+        </form>
+      </div>
+    )
+  }import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+
+const Exercise = props => (
+  <tr>
+    <td>{props.exercise.exercisename}</td>
+    <td>{props.exercise.type}</td>
+    <td>{props.exercise.category}</td>
+    <td>{props.exercise.discription}</td>
+    <td>{(props.exercise.progressionId) ? "" : "Yes"}</td>
+    <td>
+      <Link to={"/exercise/edit/"+props.exercise._id}>edit</Link> | <a href="#" onClick={() => { props.deleteExercise(props.exercise._id) }}>delete</a>
+    </td>
+  </tr>
+)
+
+export default class ExercisesList extends Component {
+  constructor(props) {
+    super(props);
+
+    this.deleteExercise = this.deleteExercise.bind(this)
+    this.state = {exercises: []};
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/exercises/')
+      .then(response => {
+        this.setState({ exercises: response.data })
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+  }
+
+  deleteExercise(id) {
+    axios.delete('http://localhost:5000/exercises/'+id)
+      .then(response => { console.log(response.data)});
+
+    this.setState({
+      exercises: this.state.exercises.filter(el => el._id !== id)
+    })
+  }
+
+  exerciseList() {
+    return this.state.exercises.map(currentexercise => {
+      return <Exercise exercise={currentexercise} deleteExercise={this.deleteExercise} key={currentexercise._id}/>;
+    })
+  }
+
+  render() {
+    return (
+      <div>
+        <h3>All Exercises</h3>
+        <table className="table">
+          <thead className="thead-light">
+            <tr>
+              <th>Exercise Name</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Discription</th>
+              <th>Progression</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            { this.exerciseList() }
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+}
+}import React, { Component } from 'react';
+
+export default class Home extends Component {
+  render() {
+    return (
+      <div>
+        <p>Welcome to Workout Tracker App!</p>
+      </div>
+    )
+  }
+}
+  }import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
+
+export default class Navbar extends Component {
+
+  render() {
+    return (
+      <nav className="navbar navbar-dark bg-dark navbar-expand-lg">
+        <Link to="/" className="navbar-brand">Workout Tracker</Link>
+        <div className="collpase navbar-collapse">
+        <ul className="navbar-nav mr-auto">
+          <li className="navbar-item">
+          <Link to="/" className="nav-link">Home</Link>
+          </li>
+          <li className="navbar-item">
+          <Link to="/workout" className="nav-link">All Workouts</Link>
+          </li>
+          <li className="navbar-item">
+          <Link to="/workout/add" className="nav-link">Log Workout</Link>
+          </li>          
+          <li className="navbar-item">
+          <Link to="/routine/add" className="nav-link">Create Routine</Link>
+          </li>
+          <li className="navbar-item">
+          <Link to="/exercise" className="nav-link">All Exercises</Link>
+          </li>
+          <li className="navbar-item">
+          <Link to="/progression/add" className="nav-link">Create Progression</Link>
+          </li>
+          <li className="navbar-item">
+          <Link to="/exercise/add" className="nav-link">Create Exercise</Link>
+          </li>
+          <li className="navbar-item">
+          <Link to="/user/add" className="nav-link">Create User</Link>
+          </li>
+        </ul>
+        </div>
+      </nav>
+    );
+  }
+}
+
+}import React, { Component } from 'react';
+import axios from 'axios';
+
+export default class ViewUser extends Component {
+  constructor(props) {
+    super(props);
+
+    this.onEditUser = this.onEditUser.bind(this);
+    this.onDeleteUser = this.onDeleteUser.bind(this);
+    this.state = { user: {}};
+
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/users/'+this.props.match.params.id)
+      .then(response => {
+        this.setState({
+          user: response.data,
+        })
+      })
+      .catch(function (error) {
+        console.log(error);
+      })
+  }
+  
+  onEditUser(id) {
+    window.location = '/user/edit/'+id;
+  }
+
+  onDeleteUser(id) {
+    var confirmation = window.confirm("Are you sure you want to delete " + this.state.user.username + " profile? \n\n Press 'Yes' to confirm or 'Cancel' to cancel.");
+    if (confirmation === true) {
+      axios.delete('http://localhost:5000/users/'+id)
+      }
+      window.location = '/user/add';
+    }
+
+  render() {
+    return (
+      <div>
+        <h3>Hello {this.state.user.username} !</h3>
+        <div className="form-group"> 
+          <h2>Gender: {this.state.user.gender}</h2>
+          <h2>Age: {this.state.user.age}</h2>
+          <h2>Weight: {this.state.user.weight}</h2>
+          <h2>Height: {this.state.user.height}</h2>
+          <h2>Unit: {this.state.user.unit}</h2>
+          </div>
+        <div className="form-group">
+          <h2>BMI Score: {this.state.user.bmi}</h2>
+          <h2>BMI Category: {this.state.user.bmiCategory}</h2>
+        </div>
+        <div className="form-group">
+          <h2>Basal Metabolic Rate: {this.state.user.bmr}</h2>
+          <h2>Acitivity Level: {this.state.user.activity}</h2>
+          <h2>Daily Calories (to maintain weight): {this.state.user.dailycalories}</h2>
+          <h2>Daily Calories (to lose weight): {this.state.user.dailycalories - 500}</h2>
+          <h2>Daily Calories (to gain weight): {this.state.user.dailycalories + 500}</h2>
+        </div>
+        <div className="form-group">
+          <button type="button" onClick={() => this.onEditUser(this.state.user._id)}>Edit User</button>
+          <button type="button" onClick={() => this.onDeleteUser(this.state.user._id)}>Delete User</button>
+        </div>
+      </div>
+    )import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import dateFormat from 'dateformat';
+
+const WorkoutLog = props => (
+  <tr>
+    <td>{dateFormat(props.workoutlog.workoutdate, "mmmm dS, yyyy, h:MM:ss TT")}</td>
+    <td>{props.workoutlog.routinename}</td>
+    <td>{props.workoutlog.duration}</td>
+    <td>{props.workoutlog.username}</td>
+    <td>
+      <Link to={"/workout/edit/"+props.workoutlog._id}>edit</Link> | <a href="#" onClick={() => { props.deleteWorkoutLog(props.workoutlog._id) }}>delete</a>
+    </td>
+  </tr>
+)
+
+export default class WorkoutLogList extends Component {
+  constructor(props) {
+    super(props);
+
+    this.deleteWorkoutLog = this.deleteWorkoutLog.bind(this);
+    this.state = {workoutlogs: []};
+  }
+
+  componentDidMount() {
+    axios.get('http://localhost:5000/workoutlogs/')
+      .then(response => {
+        this.setState({ workoutlogs: response.data })
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+  }
+
+  deleteWorkoutLog(id) {
+    axios.delete('http://localhost:5000/workoutlogs/'+id)
+      .then(response => { console.log(response.data)});
+
+    this.setState({
+      workoutlogs: this.state.workoutlogs.filter(el => el._id !== id)
+    })
+  }
+
+  workoutlogList() {
+    return this.state.workoutlogs.map(currentworkoutlog => {
+      return <WorkoutLog workoutlog={currentworkoutlog} deleteWorkoutLog={this.deleteWorkoutLog} key={currentworkoutlog._id}/>;
+    })
+  }  
+
+  render() {
+    return (
+      <div>
+        <h3>All Workouts</h3>
+        <table className="table">
+          <thead className="thead-light">
+            <tr>
+              <th>Workout Date</th>
+              <th>Routine Name</th>
+              <th>Duration</th>
+              <th>Username</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            { this.workoutlogList() }
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+}
+  }
+}
+
+
